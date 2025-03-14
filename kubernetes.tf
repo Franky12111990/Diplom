@@ -23,3 +23,49 @@ resource "yandex_kubernetes_cluster" "my_cluster" {
         subnet_id = yandex_vpc_subnet.subnet-c.id
       }
     }
+
+    public_ip = true
+  }
+
+  service_account_id      = yandex_iam_service_account.my_service_account.id
+  node_service_account_id = yandex_iam_service_account.my_service_account.id
+}
+
+# --- Группа узлов (Node Group) ---
+resource "yandex_kubernetes_node_group" "my_node_group" {
+  cluster_id   = yandex_kubernetes_cluster.my_cluster.id
+  name         = "k8s-node-group"
+  description  = "Managed Kubernetes node group"
+
+  instance_template {
+    platform_id = "standard-v2"
+
+    resources {
+      memory = 4
+      cores  = 2
+    }
+
+    boot_disk {
+      size = 50
+    }
+
+    network_interface {
+      subnet_ids = [
+        yandex_vpc_subnet.subnet-a.id,
+        yandex_vpc_subnet.subnet-b.id,
+        yandex_vpc_subnet.subnet-c.id
+      ]
+      nat = true
+    }
+
+    metadata = {
+      ssh-keys = var.ssh_public_key
+    }
+  }
+
+  scale_policy {
+    fixed_scale {
+      size = 3
+    }
+  }
+}
